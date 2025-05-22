@@ -1,9 +1,11 @@
-import { NextResponse } from 'next/server'
+import { NextResponse, NextRequest } from 'next/server'
 import { getSession } from '@/lib/auth.server'
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const session = await getSession()
+
+    console.log("req", request.url, request.nextUrl.pathname)
     
     if (!session) {
       return NextResponse.json(

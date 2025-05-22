@@ -4,7 +4,7 @@ import { getSession } from '@/lib/auth.server'
 
 // Define role-based route access
 const roleBasedRoutes = {
-  admin: ['/dashboard', '/users', '/staff', '/reports', '/settings', '/api/services', '/api/teams', '/api/users', '/api/invoices', '/api/orders',],
+  admin: ['/dashboard', '/bookings', '/orders', '/invoices', '/users', '/staff', '/teams', '/services', '/settings', '/api/services', '/api/teams', '/api/users', '/api/staff', '/api/invoices', '/api/orders',],
   staff: ['/bookings', '/orders', '/invoices', '/users', '/settings', '/api/users', '/api/invoices', '/api/orders',],
 } as const
 

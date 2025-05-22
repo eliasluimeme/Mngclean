@@ -41,7 +41,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { useAuth } from "@/components/auth-provider"
-import { supabase } from "@/lib/supabase"
 
 // Helper to parse and verify country code and phone number
 function parsePhone(phone: string | undefined, validCodes: string[]): { code: string; number: string; valid: boolean } {
@@ -98,12 +97,10 @@ export default function StaffPage() {
   useEffect(() => {
     const fetchStaff = async () => {
       setLoadingStaff(true)
-      // Fetch staff users
-      const { data: staffData, error: staffError } = await supabase
-        .from("profiles")
-        .select("*, team_members:team_members(team_id, team:teams(name))")
-        .eq("staff", true)
-      if (!staffError && staffData) {
+      // Fetch staff users from API
+      const res = await fetch("/api/staff")
+      const staffData = await res.json()
+      if (Array.isArray(staffData)) {
         // Map team assignment
         const staffWithTeams = staffData.map((staff: any) => {
           let teamName = "-"
@@ -122,10 +119,11 @@ export default function StaffPage() {
     }
     fetchStaff()
 
-    // Fetch teams for the modal
+    // Fetch teams for the modal from API
     const fetchTeams = async () => {
-      const { data, error } = await supabase.from('teams').select('id, name').order('name')
-      if (!error && data) setTeams(data)
+      const res = await fetch("/api/teams")
+      const result = await res.json()
+      if (result.teams) setTeams(result.teams.map((t: any) => ({ id: t.id, name: t.name })))
     }
     fetchTeams()
   }, [])
@@ -250,8 +248,8 @@ export default function StaffPage() {
     let userId = selectedStaff?.id
     try {
       if (isEditing && userId) {
-        // PATCH to API endpoint
-        const res = await fetch(`/api/users/${userId}`, {
+        // PATCH to staff API endpoint
+        const res = await fetch(`/api/staff/${userId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ ...payload, id: userId }),
@@ -259,22 +257,30 @@ export default function StaffPage() {
         const result = await res.json()
         if (!res.ok) throw new Error(result.error || 'Failed to update staff')
       } else {
-        // Insert new profile and get the id
-        const { data, error: insertError } = await supabase.from('profiles').insert([payload]).select('id').single()
-        userId = data?.id
+        // POST to staff API endpoint
+        const res = await fetch('/api/staff', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        })
+        const result = await res.json()
+        userId = result?.id
+        if (!res.ok) throw new Error(result.error || 'Failed to add staff')
+        // Assign team if selected
         if (userId && selectedTeam) {
-          const { error: teamInsertError } = await supabase.from('team_members').insert({ user_id: userId, team_id: selectedTeam })
-          if (teamInsertError) throw teamInsertError
+          await fetch('/api/team-members', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: userId, team_id: selectedTeam }),
+          })
         }
       }
       setIsAddStaffModalOpen(false)
       // Refresh staff list
       setLoadingStaff(true)
-      const { data: staffData, error: staffError } = await supabase
-        .from("profiles")
-        .select("*, team_members:team_members(team_id, team:teams(name))")
-        .eq("staff", true)
-      if (!staffError && staffData) {
+      const res = await fetch("/api/staff")
+      const staffData = await res.json()
+      if (Array.isArray(staffData)) {
         const staffWithTeams = staffData.map((staff: any) => {
           let teamName = "-"
           if (staff.team_members && staff.team_members.length > 0 && staff.team_members[0].team) {
@@ -295,9 +301,41 @@ export default function StaffPage() {
     }
   }
 
-  const confirmDelete = () => {
-    // Handle delete logic here
-    setIsDeleteModalOpen(false)
+  const confirmDelete = async () => {
+    if (!selectedStaff?.id) return
+    setFormLoading(true)
+    try {
+      const res = await fetch(`/api/staff/${selectedStaff.id}`, {
+        method: 'DELETE',
+      })
+      if (!res.ok) {
+        const result = await res.json()
+        throw new Error(result.error || 'Failed to delete staff')
+      }
+      setIsDeleteModalOpen(false)
+      // Refresh staff list
+      setLoadingStaff(true)
+      const res2 = await fetch("/api/staff")
+      const staffData = await res2.json()
+      if (Array.isArray(staffData)) {
+        const staffWithTeams = staffData.map((staff: any) => {
+          let teamName = "-"
+          if (staff.team_members && staff.team_members.length > 0 && staff.team_members[0].team) {
+            teamName = staff.team_members[0].team.name
+          }
+          return {
+            ...staff,
+            status: "Active",
+            teamAssignment: teamName,
+          }
+        })
+        setStaffMembers(staffWithTeams)
+      }
+      setLoadingStaff(false)
+    } catch (err: any) {
+      setFormError(err?.message || "An unexpected error occurred. Please try again.")
+      setFormLoading(false)
+    }
   }
 
   const parsedPhone = isEditing ? parsePhone(selectedStaff?.phone, validCodes) : { code: countryCode, number: "", valid: true }

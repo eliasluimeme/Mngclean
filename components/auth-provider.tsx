@@ -23,7 +23,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const initAuth = async () => {
       try {
         const currentUser = await checkSession()
+
+        console.log("path name", window.location.pathname)
+        if (window.location.pathname === '/') {
+          console.log("pushin to home page")
+          return
+        }
+
         if (!currentUser && !window.location.pathname.includes('/login')) {
+          console.log("pushing to login")
           router.push('/login')
         }
       } catch (error) {

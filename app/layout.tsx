@@ -59,7 +59,7 @@
 // }
 
 import type React from "react"
-import "./global.css"
+import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { AuthProvider } from "@/components/auth-provider"
 import { SidebarStateProvider } from "@/hooks/use-sidebar-state"

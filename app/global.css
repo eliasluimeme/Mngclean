@@ -1,0 +1,216 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 0 0% 100%;
+  --foreground: 222 47% 11%;
+  --card: 0 0% 100%;
+  --card-foreground: 222 47% 11%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 222 47% 11%;
+  --primary: 224 76% 48%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 262 83% 58%;
+  --secondary-foreground: 0 0% 100%;
+  --muted: 210 40% 96.1%;
+  --muted-foreground: 215.4 16.3% 46.9%;
+  --accent: 262 83% 58%;
+  --accent-foreground: 0 0% 100%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 214.3 31.8% 91.4%;
+  --input: 214.3 31.8% 91.4%;
+  --ring: 224 76% 48%;
+  --radius: 1.5rem;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    @apply overflow-x-hidden;
+  }
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-white text-foreground min-h-screen overflow-x-hidden;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+@layer components {
+  .container-custom {
+    @apply max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8;
+  }
+
+  .heading-xl {
+    @apply text-5xl md:text-6xl lg:text-7xl font-bold leading-[1.1] tracking-tight;
+  }
+
+  .heading-lg {
+    @apply text-4xl md:text-5xl font-bold leading-tight tracking-tight;
+  }
+
+  .heading-md {
+    @apply text-2xl md:text-3xl font-semibold leading-tight;
+  }
+
+  .text-body {
+    @apply text-base md:text-lg text-muted-foreground leading-relaxed;
+  }
+
+  .btn-primary {
+    @apply relative overflow-hidden bg-gradient-to-r from-blue-600 to-purple-600 text-white
+           px-8 py-4 rounded-2xl font-medium
+           before:absolute before:inset-0
+           before:bg-gradient-to-r before:from-purple-600 before:to-blue-600
+           before:opacity-0 before:transition-opacity before:duration-500
+           hover:before:opacity-100 shadow-[0_0_0_3px_rgba(255,255,255,1),0_4px_20px_rgba(0,0,0,0.1)]
+           hover:shadow-[0_0_0_3px_rgba(255,255,255,1),0_8px_30px_rgba(0,0,0,0.15)]
+           hover:-translate-y-1 active:translate-y-0
+           transition-all duration-300 ease-out;
+  }
+
+  .card-feature {
+    @apply p-8 rounded-3xl bg-white
+           shadow-[0_0_0_1px_rgba(0,0,0,0.05),0_10px_30px_rgba(0,0,0,0.05)]
+           hover:shadow-[0_0_0_1px_rgba(0,0,0,0.05),0_20px_40px_rgba(0,0,0,0.08)]
+           hover:-translate-y-1
+           transition-all duration-300 ease-out;
+  }
+
+  .card-service {
+    @apply aspect-square rounded-3xl overflow-hidden
+           shadow-[0_10px_30px_rgba(0,0,0,0.1)]
+           hover:shadow-[0_20px_40px_rgba(0,0,0,0.15)]
+           hover:-translate-y-2
+           transition-all duration-300 ease-out;
+  }
+
+  .gradient-text {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-purple-600
+           relative after:absolute after:bottom-0 after:left-0 after:w-full
+           after:h-[1px] after:bg-gradient-to-r after:from-blue-600/40 after:to-purple-600/40;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .glass-panel {
+    @apply bg-white/60 backdrop-blur-xl
+           shadow-[0_0_0_1px_rgba(0,0,0,0.05),0_10px_30px_rgba(0,0,0,0.05)]
+           border border-white/50;
+  }
+
+  .highlight-box {
+    @apply relative before:absolute before:-inset-1 before:rounded-[inherit]
+           before:border before:border-blue-500/20 before:bg-gradient-to-r
+           before:from-blue-500/10 before:to-purple-500/10 before:-z-10;
+  }
+
+  .glow {
+    @apply relative after:absolute after:inset-0
+           after:bg-gradient-to-r after:from-blue-500/20 after:to-purple-500/20
+           after:blur-2xl after:-z-10 after:opacity-50;
+  }
+
+  .dot-pattern {
+    background-image: radial-gradient(circle at 1px 1px, rgb(59 130 246 / 0.1) 1px, transparent 0);
+    background-size: 20px 20px;
+  }
+}
+
+/* Prevent horizontal swipe */
+html, body {
+  overflow-x: hidden;
+  position: relative;
+  width: 100%;
+  overscroll-behavior-x: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Phone Input Styles */
+.PhoneInput {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0 0.75rem;
+  background-color: rgba(255, 255, 255, 0.5);
+  border: 2px solid #e2e8f0;
+  border-radius: 0.75rem;
+  transition: all 0.2s;
+}
+
+.PhoneInput:focus-within {
+  background-color: white;
+  border-color: hsl(var(--primary));
+}
+
+.PhoneInputCountry {
+  position: relative;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  padding-right: 0.5rem;
+  border-right: 1px solid #e2e8f0;
+}
+
+.PhoneInputCountrySelect {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 100%;
+  z-index: 1;
+  border: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.PhoneInputCountryIcon {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.PhoneInputInput {
+  flex: 1;
+  border: 0;
+  padding: 0.5rem 0;
+  background: transparent;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  outline: none;
+}
+
+.PhoneInputInput::placeholder {
+  color: #94a3b8;
+}
+
+@keyframes checkmark {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+} 

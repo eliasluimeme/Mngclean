@@ -55,8 +55,6 @@ export async function middleware(request: NextRequest) {
       })
     }
 
-    console.log("request.url", request.url, pathname)
-
     // For pages: redirect if not allowed
     if (!isApiRoute && !allowedRoutes.some(route => pathname.startsWith(route))) {
       const redirectUrl = '/'

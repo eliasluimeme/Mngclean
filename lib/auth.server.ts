@@ -24,7 +24,6 @@ export async function serverLogin(email: string, password: string): Promise<{ su
     //   console.log(user.password, password)
     //   return { success: false, error: 'Invalid credentials' }
     // }
-    console.log(password, user.password)
     const passwordMatch = user.password && (await bcrypt.compare(password, user.password));
     if (!passwordMatch) {
       return { success: false, error: 'Incorrect password'};

@@ -9,18 +9,6 @@ export default function RootLayout({
 }: {
   children: React.ReactNode
 }) {
-  return (
-    <html lang="en" suppressHydrationWarning>
-      <body>
-        {/* <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
-          <AuthProvider> */}
-            <SidebarStateProvider>
-              {children}
-            </SidebarStateProvider>
-          {/* </AuthProvider>
-        </ThemeProvider> */}
-      </body>
-    </html>
-  )
+  return <>{children}</>;
 }
 

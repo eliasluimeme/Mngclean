@@ -9,7 +9,7 @@ import { BarChart3, Calendar, ClipboardList, FileText, LogOut, Menu, Moon, Sun, 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { useTheme as useNextTheme } from "next-themes"
+import { useTheme } from "@/components/theme-provider"
 import { useAuth } from "@/components/auth-provider"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { useSidebarState } from "@/hooks/use-sidebar-state"
@@ -87,7 +87,7 @@ const navItems: NavItem[] = [
 export function Sidebar() {
   const pathname = usePathname()
   const { isCollapsed, setIsCollapsed } = useSidebarState()
-  const { theme, setTheme } = useNextTheme()
+  const { theme, setTheme } = useTheme()
   const { logout, user } = useAuth()
   const [mounted, setMounted] = useState(false)
   const [isMobileOpen, setIsMobileOpen] = useState(false)

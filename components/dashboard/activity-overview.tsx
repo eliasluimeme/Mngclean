@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Chart as ChartJS, ArcElement, Tooltip as ChartTooltip, Legend } from "chart.js"
 import { Doughnut } from "react-chartjs-2"
-import { useTheme as useNextTheme } from "next-themes"
+import { useTheme } from "@/components/theme-provider"
 import { ScrollArea } from "@/components/ui/scroll-area"
 
 // Register ChartJS components
@@ -25,7 +25,7 @@ interface ActivityOverviewProps {
 }
 
 export function ActivityOverview({ total, categories }: ActivityOverviewProps) {
-  const { theme } = useNextTheme()
+  const { theme } = useTheme()
   const [mounted, setMounted] = useState(false)
   const [chartSize, setChartSize] = useState({ width: 0, height: 0 })
   const [containerWidth, setContainerWidth] = useState(0)
@@ -101,7 +101,7 @@ export function ActivityOverview({ total, categories }: ActivityOverviewProps) {
         bodyColor: isDark ? "#fff" : "#000",
         titleFont: {
           size: getFontSize(),
-          weight: "bold",
+          weight: 'bold' as const,
         },
         bodyFont: {
           size: getFontSize(),
@@ -112,7 +112,7 @@ export function ActivityOverview({ total, categories }: ActivityOverviewProps) {
       animateRotate: true,
       animateScale: true,
       duration: 800,
-      easing: "easeOutQuart",
+      easing: "easeOutQuart" as const,
     },
   }
 

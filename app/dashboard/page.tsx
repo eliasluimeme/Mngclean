@@ -765,6 +765,8 @@ function MetricCard({
   sparklineData: number[]
   icon: React.ReactNode
 }) {
+  // Ensure sparklineData contains only valid numbers
+  const safeSparklineData = sparklineData.map(v => (typeof v === 'number' && !isNaN(v) && isFinite(v) ? v : 0));
   return (
     <Card className="shadow-sm border border-border bg-background transition-all duration-300 hover:shadow-md">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -785,7 +787,7 @@ function MetricCard({
             </div>
           </div>
           <div className="h-[40px]">
-            <SparklineChart data={sparklineData} color={isPositive ? "#22c55e" : "#ef4444"} />
+            <SparklineChart data={safeSparklineData} color={isPositive ? "#22c55e" : "#ef4444"} />
           </div>
         </div>
       </CardContent>

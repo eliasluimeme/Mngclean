@@ -57,7 +57,7 @@ export function ExpensesChart() {
         label: "Expenses",
         data: [1200, 900, 1500, 2200, 1800, 2400, 2100, 1800, 2300, 2600, 3000, 3500],
         borderColor: primaryColor,
-        backgroundColor: (context) => {
+        backgroundColor: (context: any) => {
           const chart = context.chart
           const { ctx, chartArea } = chart
           if (!chartArea) return null
@@ -87,7 +87,7 @@ export function ExpensesChart() {
         label: "Expenses",
         data: [15000, 22000, 18500, 25000, 32000, 38000, 45000, 52000],
         borderColor: primaryColor,
-        backgroundColor: (context) => {
+        backgroundColor: (context: any) => {
           const chart = context.chart
           const { ctx, chartArea } = chart
           if (!chartArea) return null
@@ -122,7 +122,7 @@ export function ExpensesChart() {
     responsive: true,
     maintainAspectRatio: false,
     interaction: {
-      mode: "index",
+      mode: "index" as const,
       intersect: false,
     },
     plugins: {
@@ -138,13 +138,14 @@ export function ExpensesChart() {
         displayColors: false,
         titleFont: {
           size: getFontSize() + 2,
-          weight: "bold",
+          weight: 'bold' as const,
         },
         bodyFont: {
           size: getFontSize() + 1,
+          weight: isDark ? 500 : 400,
         },
         callbacks: {
-          label: (context) => {
+          label: (context: any) => {
             let label = context.dataset.label || ""
             if (label) {
               label += ": "
@@ -154,7 +155,7 @@ export function ExpensesChart() {
             }
             return label
           },
-          afterLabel: (context) => {
+          afterLabel: (context: any) => {
             const dataIndex = context.dataIndex
             const dataset = context.dataset
             if (dataIndex > 0) {
@@ -179,7 +180,7 @@ export function ExpensesChart() {
           color: textColor,
           font: {
             size: getFontSize(),
-            weight: isDark ? "500" : "400", // Slightly bolder in dark mode
+            weight: isDark ? 500 : 400, // Slightly bolder in dark mode
           },
           maxRotation: 0,
           padding: 10,
@@ -200,9 +201,9 @@ export function ExpensesChart() {
           padding: 10,
           font: {
             size: getFontSize(),
-            weight: isDark ? "500" : "400", // Slightly bolder in dark mode
+            weight: isDark ? 500 : 400, // Slightly bolder in dark mode
           },
-          callback: (value) => "$" + value,
+          callback: (value: any) => "$" + value,
           maxTicksLimit: 5,
         },
         border: {

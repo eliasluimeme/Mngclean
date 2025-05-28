@@ -9,7 +9,7 @@ const roleBasedRoutes = {
 } as const
 
 // Public routes that don't require authentication
-const publicRoutes = ['/', '/login', '/api/auth/login', '/api/auth/refresh', '/api/auth/me', ]
+const publicRoutes = ['/', '/login', '/api/auth/login', '/api/auth/refresh', '/api/auth/me', '/api/submit',]
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl

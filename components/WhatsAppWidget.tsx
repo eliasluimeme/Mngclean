@@ -2,8 +2,18 @@
 
 import { WhatsAppWidget } from "react-whatsapp-widget";
 import "react-whatsapp-widget/dist/index.css";
+import { fbEvent } from '@/components/FacebookPixel';
 
 export default function WhatsAppButton() {
+  const handleWidgetToggle = () => {
+    // Track when WhatsApp widget is opened
+    fbEvent('Contact', {
+      content_name: 'WhatsApp Widget',
+      content_category: 'Widget Interaction',
+      content_type: 'Chat Initiated'
+    });
+  };
+
   return (
     <div className="fixed bottom-4 right-4 z-50">
       <style jsx global>{`
@@ -47,13 +57,15 @@ export default function WhatsAppButton() {
           box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
         }
       `}</style>
-      <WhatsAppWidget
-        phoneNumber="+212616090788"
-        companyName="MNG Clean"
-        message="👋 Bonjour! Comment pouvons-nous vous aider aujourd'hui?"
-        sendButton="Envoyer"
-        replyTimeText="Nous répondons en quelques minutes"
-      />
+      <div onClick={handleWidgetToggle}>
+        <WhatsAppWidget
+          phoneNumber="+212616090788"
+          companyName="MNG Clean"
+          message="👋 Bonjour! Comment pouvons-nous vous aider aujourd'hui?"
+          sendButton="Envoyer"
+          replyTimeText="Nous répondons en quelques minutes"
+        />
+      </div>
     </div>
   );
 }

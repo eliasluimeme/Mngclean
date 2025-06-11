@@ -7,10 +7,14 @@ import Features from "@/components/Features";
 import Services from "@/components/Services";
 import Testimonial from "@/components/Testimonial";
 import Contact from "@/components/Contact";
+import FacebookPixelTest from "@/components/FacebookPixelTest";
 
 export default function Home() {
   return (
     <main className="min-h-screen bg-white">
+      {/* Facebook Pixel Test Panel - Remove in production */}
+      {process.env.NODE_ENV === 'development' && <FacebookPixelTest />}
+
       {/* Header */}
       <div className="sticky top-0 left-0 right-0 z-50">
         <div className="glass-panel">

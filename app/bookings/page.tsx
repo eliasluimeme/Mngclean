@@ -570,6 +570,7 @@ interface Booking {
     serviceType: string;
     pricePerMeter: number;
   }>;
+  canceled?: boolean; // <-- add this line
 }
 
 type BookingStatus = 'Confirmed' | 'Pending' | 'Cancelled'
@@ -785,6 +786,9 @@ export default function BookingsPage() {
   // Add state for discard confirmation
   const [showDiscardModal, setShowDiscardModal] = useState(false);
   const [pendingClose, setPendingClose] = useState(false);
+
+  // In BookingsPage component, add cancel loading state
+  const [cancelBookingLoading, setCancelBookingLoading] = useState(false);
 
   // User search effect (debounced)
   useEffect(() => {
@@ -2054,8 +2058,51 @@ export default function BookingsPage() {
 
               {/* Booking Progress Section */}
               <div className="rounded-md border">
-                <div className="bg-muted/50 p-3 border-b">
+                <div className="bg-muted/50 p-3 border-b flex items-center justify-between">
                   <h4 className="text-sm font-medium">Booking Progress</h4>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    className="ml-2"
+                    disabled={selectedBooking?.status === 'Cancelled' || selectedBooking?.canceled || cancelBookingLoading}
+                    onClick={async () => {
+                      if (!selectedBooking) return;
+                      setCancelBookingLoading(true);
+                      try {
+                        const res = await fetch(`/api/orders/${selectedBooking.id}/status`, {
+                          method: 'PATCH',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ canceled: true, status: 'Cancelled' }),
+                        });
+                        if (res.ok) {
+                          const updated = await res.json();
+                          setSelectedBooking((prev) => prev && prev.id === updated.id ? { ...prev, ...updated } : prev);
+                          setBookings((prev) => prev.map((b) => b.id === updated.id ? { ...b, ...updated } : b));
+                          toast({
+                            title: 'Booking cancelled',
+                            description: `The booking for ${selectedBooking.client} has been cancelled.`,
+                            variant: 'destructive',
+                          });
+                        } else {
+                          toast({
+                            title: 'Error',
+                            description: 'Failed to cancel booking',
+                            variant: 'destructive',
+                          });
+                        }
+                      } catch (err) {
+                        toast({
+                          title: 'Error',
+                          description: 'Failed to cancel booking',
+                          variant: 'destructive',
+                        });
+                      } finally {
+                        setCancelBookingLoading(false);
+                      }
+                    }}
+                  >
+                    {selectedBooking?.canceled ? 'Cancelled' : 'Cancel'}
+                  </Button>
                 </div>
                 
                 <div className="p-4">
@@ -2119,13 +2166,20 @@ export default function BookingsPage() {
                       const visitKey = `${selectedBooking.id}-visit-${visit.visitIndex}`;
                       const checked = visitChecks[visitKey] ?? visit.completed;
                       return (
-                        <div key={visitKey} className="flex items-center justify-between border rounded-md p-3">
+                        <div
+                          key={visitKey}
+                          className={`flex items-center justify-between border rounded-md p-3 transition-opacity ${
+                            visit.completed || (visitCompletionLoading && visitConfirmModal.visitKey === visitKey) || selectedBooking.canceled || selectedBooking.status === 'Cancelled'
+                              ? 'opacity-50 cursor-not-allowed bg-muted/30'
+                              : ''
+                          }`}
+                        >
                           <div>
                             <div className="font-medium text-sm">{visit.title}</div>
                           </div>
                           <Checkbox
                             checked={checked}
-                            disabled={visit.completed || (visitCompletionLoading && visitConfirmModal.visitKey === visitKey)}
+                            disabled={visit.completed || (visitCompletionLoading && visitConfirmModal.visitKey === visitKey) || selectedBooking.canceled || selectedBooking.status === 'Cancelled'}
                             onCheckedChange={(checked) => {
                               if (checked) {
                                 // Open confirmation modal

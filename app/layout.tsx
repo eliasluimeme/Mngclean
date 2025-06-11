@@ -59,10 +59,18 @@
 // }
 
 import type React from "react"
+import type { Metadata } from "next"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { AuthProvider } from "@/components/auth-provider"
 import { SidebarStateProvider } from "@/hooks/use-sidebar-state"
+import { Providers } from "@/components/Providers"
+import WhatsAppButton from "@/components/WhatsAppWidget"
+
+export const metadata: Metadata = {
+  title: "MNG Clean - Professional Cleaning Services",
+  description: "Professional cleaning services in Morocco. Regular cleaning, post-construction cleaning, carpet and sofa cleaning.",
+}
 
 export default function RootLayout({
   children,
@@ -76,6 +84,7 @@ export default function RootLayout({
           <AuthProvider>
             <SidebarStateProvider>
               {children}
+              <Providers />
             </SidebarStateProvider>
           </AuthProvider>
         </ThemeProvider>

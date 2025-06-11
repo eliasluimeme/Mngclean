@@ -5,6 +5,7 @@ import { Button } from "@/components/lui/button";
 import { Input } from "@/components/lui/input";
 import { useState } from "react";
 import { Check } from "lucide-react";
+import { fbEvent } from '@/components/FacebookPixel';
 
 const Contact = () => {
   const [formData, setFormData] = useState({
@@ -28,6 +29,16 @@ const Contact = () => {
     setIsLoading(true);
 
     try {
+      // Track the contact form submission
+      fbEvent('Lead', {
+        content_name: 'Contact Form',
+        content_category: 'Contact',
+        content_type: 'General Inquiry',
+        status: 'submitted',
+        city: formData.city,
+        surface_area: formData.size || 'N/A'
+      });
+
       // Submit to Google Sheets
       const response = await fetch("/api/submit", {
         method: "POST",
@@ -44,11 +55,26 @@ const Contact = () => {
         throw new Error("Failed to submit form");
       }
 
+      // Track successful submission
+      fbEvent('SubmitApplication', {
+        content_name: 'Contact Form',
+        content_category: 'Contact',
+        content_type: 'General Inquiry',
+        status: 'success'
+      });
+
       setIsSuccess(true);
       setIsLoading(false);
 
       // Wait for animation before opening WhatsApp
       setTimeout(() => {
+        // Track WhatsApp redirect
+        fbEvent('Contact', {
+          content_name: 'Contact Form',
+          content_category: 'WhatsApp Redirect',
+          content_type: 'General Inquiry'
+        });
+
         // Prepare WhatsApp message
         const message = `
 *Nouvelle Demande de Contact*
@@ -70,6 +96,15 @@ Superficie: ${formData.size}m²
       }, 1000);
     } catch (error) {
       console.error("Error submitting form:", error);
+
+      // Track error event
+      fbEvent('SubmitError', {
+        content_name: 'Contact Form',
+        content_category: 'Contact',
+        content_type: 'General Inquiry',
+        error_message: error instanceof Error ? error.message : 'Unknown error'
+      });
+
       setIsLoading(false);
       // You might want to show an error message to the user here
     }

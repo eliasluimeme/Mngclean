@@ -1,11 +1,8 @@
 'use client';
 
-import dynamic from 'next/dynamic';
-
-const FacebookPixel = dynamic(() => import('./FacebookPixel'), {
-  ssr: false
-});
+// This component is no longer needed as Facebook Pixel is now loaded directly in layout.tsx
+// Keeping it for potential future providers
 
 export function Providers() {
-  return <FacebookPixel />;
-} 
+  return null;
+}

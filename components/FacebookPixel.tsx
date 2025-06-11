@@ -1,6 +1,5 @@
 "use client";
 
-import Script from 'next/script';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { useEffect } from 'react';
 
@@ -14,33 +13,19 @@ declare global {
   }
 }
 
-const FB_PIXEL_ID = process.env.NEXT_PUBLIC_FB_PIXEL_ID;
-
-export default function FacebookPixel() {
+export default function FacebookPixelPageTracker() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
   useEffect(() => {
-    if (window.fbq) {
+    // Track page views on route changes
+    if (typeof window !== 'undefined' && window.fbq) {
       window.fbq('track', 'PageView');
+      console.log('Facebook Pixel: PageView tracked for', pathname);
     }
   }, [pathname, searchParams]);
 
-  if (!FB_PIXEL_ID) return null;
-
-  return (
-    <>
-      <Script
-        id="fb-pixel-script"
-        src="/fb-pixel.js"
-        strategy="afterInteractive"
-        onLoad={() => {
-          window.fbq?.('init', FB_PIXEL_ID);
-          window.fbq?.('track', 'PageView');
-        }}
-      />
-    </>
-  );
+  return null; // This component doesn't render anything
 }
 
 export const fbEvent = (eventName: string, options: FacebookEventOptions = {}) => {

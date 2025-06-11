@@ -8,10 +8,14 @@ import Services from "@/components/Services";
 import Testimonial from "@/components/Testimonial";
 import Contact from "@/components/Contact";
 import FacebookPixelTest from "@/components/FacebookPixelTest";
+import FacebookPixelPageTracker from "@/components/FacebookPixel";
 
 export default function Home() {
   return (
     <main className="min-h-screen bg-white">
+      {/* Facebook Pixel Page Tracker */}
+      <FacebookPixelPageTracker />
+
       {/* Facebook Pixel Test Panel - Remove in production */}
       {process.env.NODE_ENV === 'development' && <FacebookPixelTest />}
 

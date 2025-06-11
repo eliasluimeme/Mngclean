@@ -14,9 +14,17 @@ export default function FacebookPixelTest() {
       if (typeof window !== 'undefined' && window.fbq) {
         setPixelLoaded(true);
         addTestResult('✅ Facebook Pixel loaded successfully');
+
+        // Also check if it's properly initialized
+        try {
+          window.fbq('track', 'PageView');
+          addTestResult('✅ Facebook Pixel can track events');
+        } catch (error) {
+          addTestResult('⚠️ Facebook Pixel loaded but cannot track events');
+        }
       } else {
         setPixelLoaded(false);
-        addTestResult('❌ Facebook Pixel not loaded');
+        addTestResult('❌ Facebook Pixel not loaded - window.fbq not available');
       }
     };
 

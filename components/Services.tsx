@@ -905,7 +905,8 @@ Quartier: ${formData.district}
                                 }
 
                                 const range = getPriceRange(estimatedPrice);
-                                return `Estimation: ${range.min}dhs - ${range.max}dhs`;
+                                // return `Estimation: ${range.min}dhs - ${range.max}dhs`;
+                                return ""
                               })()}
                             </div>
                           )}

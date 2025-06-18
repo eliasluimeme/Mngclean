@@ -78,14 +78,14 @@ const services: Service[] = [
         label: "Placards de cuisine",
         type: "area",
         basePrice: 0,
-        pricePerUnit: 0.83,
+        pricePerUnit: 1,
       },
       {
         id: "clothes-cabinets",
         label: "Placard des vêtements",
         type: "area",
         basePrice: 0,
-        pricePerUnit: 0.83,
+        pricePerUnit: 1,
       },
       {
         id: "furniture",
@@ -577,9 +577,11 @@ Quartier: ${formData.district}
         });
 
         // Open WhatsApp
-        const whatsappUrl = `https://wa.me/212616090788?text=${encodeURIComponent(
-          message
-        )}`;
+        const whatsappUrl = `https://wa.me/212616090788`
+        // ?text=${encodeURIComponent(
+        //   message
+        // )}`
+        ;
         window.open(whatsappUrl, "_blank");
       }, 1000);
     } catch (error) {
@@ -702,7 +704,7 @@ Quartier: ${formData.district}
                         <div className="text-sm font-medium">{option.label}</div>
                         <div className="text-xs text-muted-foreground">{option.subLabel}</div>
                       </div>
-                      <div className="text-sm font-semibold text-primary">
+                      {/* <div className="text-sm font-semibold text-primary">
                         {typeof option.price === "string"
                           ? option.price
                           : option.pricePerMeter && sizeValue
@@ -714,7 +716,7 @@ Quartier: ${formData.district}
                           : option.pricePerMeter
                           ? `À partir de ${option.pricePerMeter}dhs/m²`
                           : ""}
-                      </div>
+                      </div> */}
                     </div>
                     {selectedOptionId === option.id && service.id === "carpet-cleaning" && (
                       <div className="mt-3">
@@ -830,7 +832,7 @@ Quartier: ${formData.district}
                           <div className="text-sm font-medium mb-1">
                             {additionalService.label}
                           </div>
-                          <div className="text-xs text-muted-foreground">
+                          {/* <div className="text-xs text-muted-foreground">
                             {additionalService.type === "items"
                               ? additionalService.id === "ironing"
                                 ? `${additionalService.basePrice}dhs / semaine ${
@@ -850,7 +852,7 @@ Quartier: ${formData.district}
                                 additionalService.id === "clothes-cabinets"
                               ? `${additionalService.pricePerUnit}dhs/m² (basé sur la surface totale)`
                               : `${additionalService.pricePerUnit}dhs/m²`}
-                          </div>
+                          </div> */}
                           {selectedAdditionalServices.includes(
                             additionalService.id
                           ) && (
@@ -948,7 +950,7 @@ Quartier: ${formData.district}
               </div>
 
               <div className="pt-4 border-t space-y-4">
-                {totalPrice > 0 && (
+                {/* {totalPrice > 0 && (
                   <div className="text-center">
                     <span className="text-sm font-medium">
                       Prix total estimé:{" "}
@@ -960,7 +962,7 @@ Quartier: ${formData.district}
                       })()}
                     </div>
                   </div>
-                )}
+                )} */}
                 <Button
                   onClick={() => setStep(3)}
                   className="w-full h-12 text-sm font-medium rounded-lg bg-gradient-to-r from-primary to-secondary hover:opacity-90 transition-opacity"

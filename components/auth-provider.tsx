@@ -2,13 +2,14 @@
 
 import { createContext, useContext, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { User, AuthContextType } from '@/lib/auth.types'
+import { User, AuthContextType, RegisterCredentials } from '@/lib/auth.types'
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
   isLoading: true,
   error: null,
   login: async () => ({ success: false, error: "Not initialized" }),
+  register: async () => ({ success: false, error: "Not initialized" }),
   logout: async () => {},
   checkSession: async () => null,
 })
@@ -30,13 +31,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return
         }
 
-        if (!currentUser && !window.location.pathname.includes('/login')) {
+        if (!currentUser && !window.location.pathname.includes('/login') && !window.location.pathname.includes('/register')) {
           console.log("pushing to login")
           router.push('/login')
         }
       } catch (error) {
         console.error('Auth initialization error:', error)
-        if (!window.location.pathname.includes('/login')) {
+        if (!window.location.pathname.includes('/login') && !window.location.pathname.includes('/register')) {
           router.push('/login')
         }
       }
@@ -114,6 +115,45 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  const register = async (credentials: RegisterCredentials) => {
+    try {
+      setIsLoading(true)
+      setError(null)
+
+      const response = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: 'include',
+        body: JSON.stringify(credentials),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || "Registration failed")
+      }
+
+      if (data.user) {
+        setUser(data.user)
+        if (data.user.role === "admin") {
+          router.push("/dashboard")
+        } else {
+          router.push("/bookings")
+        }
+        return { success: true, user: data.user }
+      }
+      throw new Error("No user data received")
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Registration failed"
+      setError(errorMessage)
+      return { success: false, error: errorMessage }
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   const logout = async () => {
     try {
       setIsLoading(true)
@@ -138,6 +178,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isLoading,
         error,
         login,
+        register,
         logout,
         checkSession,
       }}

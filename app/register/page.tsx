@@ -3,7 +3,7 @@
 import type React from "react"
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { useAuth } from "@/components/auth-provider"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -12,34 +12,102 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Loader2, Moon, Sun } from "lucide-react"
 import { useTheme } from "@/components/theme-provider"
 
-export default function LoginPage() {
+export default function RegisterPage() {
+  const [name, setName] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const { login, error, isLoading } = useAuth()
-  const { theme, setTheme } = useTheme()
+  const [error, setError] = useState<string | null>(null)
   const [mounted, setMounted] = useState(false)
+  const { theme, setTheme } = useTheme()
+  const router = useRouter()
 
   useEffect(() => {
     setMounted(true)
   }, [])
 
+  const validateForm = (): boolean => {
+    setError(null)
+
+    if (!name.trim()) {
+      setError("Name is required")
+      return false
+    }
+
+    if (!email || !email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+      setError("Please enter a valid email address")
+      return false
+    }
+
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters long")
+      return false
+    }
+
+    if (password !== confirmPassword) {
+      setError("Passwords do not match")
+      return false
+    }
+
+    return true
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!email || !password) {
+
+    if (!validateForm()) {
       return
     }
+
     setIsSubmitting(true)
-    const result = await login(email, password)
-    setIsSubmitting(false)
-    if (result.success) {
-      // Redirect is handled in the auth provider
+    setError(null)
+
+    try {
+      const nameParts = name.trim().split(' ')
+      const firstName = nameParts[0]
+      const lastName = nameParts.slice(1).join(' ') || firstName
+
+      const response = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          first_name: firstName,
+          last_name: lastName,
+          email,
+          password,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || "Registration failed")
+      }
+
+      if (data.user) {
+        router.push("/dashboard")
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Registration failed"
+      setError(errorMessage)
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
   if (!mounted) {
     return null
   }
+
+  const isFormValid =
+    name.trim() &&
+    email &&
+    password.length >= 8 &&
+    password === confirmPassword
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
@@ -63,8 +131,8 @@ export default function LoginPage() {
 
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle className="text-2xl">Login</CardTitle>
-          <CardDescription>Enter your credentials to access your dashboard</CardDescription>
+          <CardTitle className="text-2xl">Create Account</CardTitle>
+          <CardDescription>Sign up to get started with MngClean</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -73,6 +141,19 @@ export default function LoginPage() {
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
+
+            <div className="space-y-2">
+              <Label htmlFor="name">Full Name</Label>
+              <Input
+                id="name"
+                type="text"
+                placeholder="John Doe"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                disabled={isSubmitting}
+                required
+              />
+            </div>
 
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
@@ -88,12 +169,7 @@ export default function LoginPage() {
             </div>
 
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="password">Password</Label>
-                <Button variant="link" className="h-auto p-0 text-xs" type="button">
-                  Forgot password?
-                </Button>
-              </div>
+              <Label htmlFor="password">Password</Label>
               <Input
                 id="password"
                 type="password"
@@ -103,36 +179,43 @@ export default function LoginPage() {
                 disabled={isSubmitting}
                 required
               />
+              <p className="text-xs text-muted-foreground">At least 8 characters</p>
             </div>
 
-            <Button type="submit" className="w-full" disabled={isSubmitting || !email || !password}>
+            <div className="space-y-2">
+              <Label htmlFor="confirmPassword">Confirm Password</Label>
+              <Input
+                id="confirmPassword"
+                type="password"
+                placeholder="••••••••"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                disabled={isSubmitting}
+                required
+              />
+            </div>
+
+            <Button type="submit" className="w-full" disabled={isSubmitting || !isFormValid}>
               {isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Logging in...
+                  Creating account...
                 </>
               ) : (
-                "Log in"
+                "Create Account"
               )}
             </Button>
           </form>
         </CardContent>
-        <CardFooter className="flex flex-col space-y-4">
+        <CardFooter>
           <div className="w-full text-center text-sm text-muted-foreground">
-            <span>Don&apos;t have an account? </span>
+            <span>Already have an account? </span>
             <Button variant="link" className="h-auto p-0" asChild>
-              <Link href="/register">Sign up</Link>
+              <Link href="/login">Log in</Link>
             </Button>
           </div>
-
-          {/* <div className="text-center text-xs text-muted-foreground">
-            <p>For demo purposes, use:</p>
-            <p>Admin: admin@example.com / admin123</p>
-            <p>Staff: staff@example.com / staff123</p>
-          </div> */}
         </CardFooter>
       </Card>
     </div>
   )
 }
-

@@ -19,6 +19,13 @@ export interface LoginCredentials {
   password: string
 }
 
+export interface RegisterCredentials {
+  first_name: string
+  last_name: string
+  email: string
+  password: string
+}
+
 export interface AuthResponse {
   success: boolean
   message?: string
@@ -37,11 +44,18 @@ export interface LoginResult {
   error?: string
 }
 
+export interface RegisterResult {
+  success: boolean
+  user?: User
+  error?: string
+}
+
 export interface AuthContextType {
   user: User | null
   isLoading: boolean
   error: string | null
   login: (email: string, password: string) => Promise<LoginResult>
+  register: (credentials: RegisterCredentials) => Promise<RegisterResult>
   logout: () => Promise<void>
   checkSession: () => Promise<User | null>
 } 

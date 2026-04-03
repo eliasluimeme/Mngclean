@@ -4,12 +4,15 @@ import { getSession } from '@/lib/auth.server'
 
 // Define role-based route access
 const roleBasedRoutes = {
-  admin: ['/dashboard', '/bookings', '/orders', '/invoices', '/users', '/staff', '/teams', '/services', '/settings', '/api/services', '/api/teams', '/api/users', '/api/staff', '/api/invoices', '/api/orders',],
+  admin: ['/dashboard', '/bookings', '/appointments', '/orders', '/invoices', '/users', '/staff', '/teams', '/services', '/settings', '/api/services', '/api/teams', '/api/users', '/api/staff', '/api/workers', '/api/appointments', '/api/availability', '/api/invoices', '/api/orders',],
   staff: ['/bookings', '/orders', '/invoices', '/users', '/settings', '/api/users', '/api/invoices', '/api/orders',],
 } as const
 
+const adminOnlyApiRoutes = ['/api/appointments', '/api/workers', '/api/availability']
+const adminOnlyPageRoutes = ['/appointments']
+
 // Public routes that don't require authentication
-const publicRoutes = ['/', '/login', '/api/auth/login', '/api/auth/refresh', '/api/auth/me', '/api/submit',]
+const publicRoutes = ['/', '/login', '/register', '/api/auth/login', '/api/auth/register', '/api/auth/refresh', '/api/auth/me', '/api/submit',]
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
@@ -46,6 +49,21 @@ export async function middleware(request: NextRequest) {
   // Role-based access for API and page routes
   if (session) {
     const userRole = session.user.role
+    const isAdmin = Boolean(session.user.admin)
+    const isAdminOnlyApi = adminOnlyApiRoutes.some(route => pathname.startsWith(route))
+    const isAdminOnlyPage = adminOnlyPageRoutes.some(route => pathname.startsWith(route))
+
+    if (!isAdmin && isApiRoute && isAdminOnlyApi) {
+      return new NextResponse(JSON.stringify({ error: 'Forbidden: admin access required' }), {
+        status: 403,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    }
+
+    if (!isAdmin && !isApiRoute && isAdminOnlyPage) {
+      return NextResponse.redirect(new URL('/', request.url))
+    }
+
     const allowedRoutes = roleBasedRoutes[userRole as keyof typeof roleBasedRoutes] || []
     // For API: allow if the route matches allowed routes
     if (isApiRoute && !allowedRoutes.some(route => pathname.startsWith(route))) {

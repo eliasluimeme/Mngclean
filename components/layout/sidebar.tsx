@@ -5,7 +5,7 @@ import type React from "react"
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { BarChart3, Calendar, ClipboardList, FileText, LogOut, Menu, Moon, Sun, Users, X, Settings, FileSpreadsheet } from "lucide-react"
+import { BarChart3, Calendar, ClipboardList, FileText, LogOut, Menu, Moon, Sun, Users, X, Settings, FileSpreadsheet, CalendarDays } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
@@ -27,6 +27,12 @@ const navItems: NavItem[] = [
     href: "/dashboard",
     icon: BarChart3,
     roles: ["admin"],
+  },
+  {
+    title: "Appointments",
+    href: "/appointments",
+    icon: CalendarDays,
+    roles: ["admin", "staff"],
   },
   {
     title: "Bookings",

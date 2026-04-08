@@ -1,9 +1,16 @@
 import { supabase } from "@/lib/supabase-server";
-import { buildSlotCapacity, getRequiredWorkers, getServiceCredits } from "@/lib/appointments/capacity";
+import {
+  DEFAULT_APPOINTMENT_SETTINGS,
+  buildSlotCapacity,
+  getRequiredWorkers,
+  getServiceCredits,
+} from "@/lib/appointments/capacity";
 import { isMissingAppointmentTimeColumnError } from "@/lib/appointments/db-errors";
+import { getAppointmentSettings } from "@/lib/appointments/settings";
 import { normalizeAppointmentStatus } from "@/lib/appointments/status";
 import { getDefaultTimeRangeForSlot, normalizeTimeString } from "@/lib/appointments/time";
 import type {
+  AppointmentSettings,
   AppointmentStatus,
   AppointmentWithAssignments,
   ServiceType,
@@ -107,7 +114,10 @@ function mapWorkerRow(row: any): Worker {
   };
 }
 
-export function mapAppointmentRow(row: any): AppointmentWithAssignments {
+export function mapAppointmentRow(
+  row: any,
+  settings: AppointmentSettings = DEFAULT_APPOINTMENT_SETTINGS,
+): AppointmentWithAssignments {
   const rawAssignments = Array.isArray(row.appointment_assignments) ? row.appointment_assignments : [];
 
   const assignments: AppointmentWithAssignments["assignments"] = rawAssignments.map((assignment: any) => {
@@ -143,12 +153,14 @@ export function mapAppointmentRow(row: any): AppointmentWithAssignments {
     worker_ids: assignments.map(
       (assignment: AppointmentWithAssignments["assignments"][number]) => assignment.worker_id,
     ),
-    required_workers: getRequiredWorkers(serviceType),
-    used_credits: getServiceCredits(serviceType),
+    required_workers: getRequiredWorkers(serviceType, settings.service_worker_requirements),
+    used_credits: getServiceCredits(serviceType, settings.service_worker_requirements),
   };
 }
 
 export async function getAppointmentsRange(from?: string, to?: string): Promise<AppointmentWithAssignments[]> {
+  const settings = await getAppointmentSettings();
+
   const runQuery = async (selectClause: string) => {
     let query = supabase.from("appointments").select(selectClause).order("scheduled_date", { ascending: true });
 
@@ -166,7 +178,7 @@ export async function getAppointmentsRange(from?: string, to?: string): Promise<
   const initial = await runQuery(APPOINTMENT_SELECT);
 
   if (!initial.error) {
-    return (initial.data || []).map(mapAppointmentRow);
+    return (initial.data || []).map((row: any) => mapAppointmentRow(row, settings));
   }
 
   if (!isMissingAppointmentTimeColumnError(initial.error)) {
@@ -179,14 +191,17 @@ export async function getAppointmentsRange(from?: string, to?: string): Promise<
     throw new Error(legacy.error.message);
   }
 
-  return (legacy.data || []).map(mapAppointmentRow);
+  return (legacy.data || []).map((row: any) => mapAppointmentRow(row, settings));
 }
 
 export async function getSlotAppointments(
   date: string,
   timeslot: Timeslot,
   excludeAppointmentId?: string,
+  settings?: AppointmentSettings,
 ): Promise<AppointmentWithAssignments[]> {
+  const effectiveSettings = settings || (await getAppointmentSettings());
+
   const runQuery = async (selectClause: string) => {
     let query = supabase
       .from("appointments")
@@ -205,7 +220,7 @@ export async function getSlotAppointments(
   const initial = await runQuery(APPOINTMENT_SELECT);
 
   if (!initial.error) {
-    return (initial.data || []).map(mapAppointmentRow);
+    return (initial.data || []).map((row: any) => mapAppointmentRow(row, effectiveSettings));
   }
 
   if (!isMissingAppointmentTimeColumnError(initial.error)) {
@@ -218,10 +233,12 @@ export async function getSlotAppointments(
     throw new Error(legacy.error.message);
   }
 
-  return (legacy.data || []).map(mapAppointmentRow);
+  return (legacy.data || []).map((row: any) => mapAppointmentRow(row, effectiveSettings));
 }
 
 export async function getAppointmentById(id: string): Promise<AppointmentWithAssignments | null> {
+  const settings = await getAppointmentSettings();
+
   const runQuery = async (selectClause: string) => {
     return supabase
       .from("appointments")
@@ -233,7 +250,7 @@ export async function getAppointmentById(id: string): Promise<AppointmentWithAss
   const initial = await runQuery(APPOINTMENT_SELECT);
 
   if (!initial.error) {
-    return initial.data ? mapAppointmentRow(initial.data) : null;
+    return initial.data ? mapAppointmentRow(initial.data, settings) : null;
   }
 
   if (!isMissingAppointmentTimeColumnError(initial.error)) {
@@ -246,7 +263,7 @@ export async function getAppointmentById(id: string): Promise<AppointmentWithAss
     throw new Error(legacy.error.message);
   }
 
-  return legacy.data ? mapAppointmentRow(legacy.data) : null;
+  return legacy.data ? mapAppointmentRow(legacy.data, settings) : null;
 }
 
 export async function getActiveWorkers(): Promise<Worker[]> {
@@ -285,8 +302,12 @@ export async function getSlotAvailability(
   timeslot: Timeslot,
   excludeAppointmentId?: string,
 ): Promise<SlotAvailability> {
-  const slotAppointments = await getSlotAppointments(date, timeslot, excludeAppointmentId);
-  const capacity = buildSlotCapacity(slotAppointments);
+  const settings = await getAppointmentSettings();
+  const slotAppointments = await getSlotAppointments(date, timeslot, excludeAppointmentId, settings);
+  const capacity = buildSlotCapacity(slotAppointments, {
+    serviceWorkerRequirements: settings.service_worker_requirements,
+    totalSlotCapacity: settings.total_slot_capacity,
+  });
   const activeWorkers = await getActiveWorkers();
   const busyWorkerIds = getBusyWorkerIds(slotAppointments);
   const busySet = new Set(busyWorkerIds);
@@ -297,5 +318,6 @@ export async function getSlotAvailability(
     capacity,
     busy_worker_ids: busyWorkerIds,
     available_workers: activeWorkers.filter((worker) => !busySet.has(worker.id)),
+    settings,
   };
 }

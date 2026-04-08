@@ -18,6 +18,7 @@ import { BoardView } from "@/components/appointments/board-view";
 import { CalendarView } from "@/components/appointments/calendar-view";
 import { ManageWorkersModal } from "@/components/appointments/manage-workers-modal";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { DEFAULT_APPOINTMENT_SETTINGS } from "@/lib/appointments/capacity";
 import { evaluateBoardMoveGuard } from "@/lib/appointments/drag-drop-guards";
 import { getDefaultTimeRangeForSlot } from "@/lib/appointments/time";
 import { AppointmentInput, AppointmentStatus, AppointmentWithAssignments, Timeslot } from "@/lib/appointments/types";
@@ -67,6 +68,7 @@ export function AppointmentsShell() {
   const {
     appointments,
     workers,
+    settings,
     loading,
     error,
     createAppointment,
@@ -76,7 +78,10 @@ export function AppointmentsShell() {
     createWorker,
     updateWorker,
     deleteWorker,
+    updateAppointmentSettings,
   } = useAppointments(queryRange);
+
+  const effectiveSettings = settings || DEFAULT_APPOINTMENT_SETTINGS;
 
   const weekStart = useMemo(() => startOfWeek(selectedDate, { weekStartsOn: 1 }), [selectedDate]);
 
@@ -267,15 +272,19 @@ export function AppointmentsShell() {
         defaultStartTime={defaultStartTime}
         defaultEndTime={defaultEndTime}
         preferredStatus={preferredStatus}
+        serviceWorkerRequirements={effectiveSettings.service_worker_requirements}
+        totalSlotCapacity={effectiveSettings.total_slot_capacity}
       />
 
       <ManageWorkersModal
         open={isWorkersModalOpen}
         onOpenChange={setIsWorkersModalOpen}
         workers={workers}
+        settings={effectiveSettings}
         onCreateWorker={createWorker}
         onUpdateWorker={updateWorker}
         onDeleteWorker={deleteWorker}
+        onUpdateSettings={updateAppointmentSettings}
       />
     </div>
   );

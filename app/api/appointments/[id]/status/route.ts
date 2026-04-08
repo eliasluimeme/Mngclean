@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAdminApiAccess } from "@/lib/admin-api";
 import { supabase } from "@/lib/supabase-server";
+import { getAppointmentSettings } from "@/lib/appointments/settings";
 import { getLegacyDbStatusCandidate, isAppointmentStatusConstraintError } from "@/lib/appointments/status";
 import { getAppointmentById, getSlotAppointments } from "@/lib/appointments/server";
 import { canTransitionStatus, getAllowedStatusTransitions, isAppointmentStatus, validateCapacity, validateWorkerCount } from "@/lib/appointments/validators";
@@ -39,8 +40,14 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
       );
     }
 
+    const appointmentSettings = await getAppointmentSettings();
+
     if (["scheduled", "on_site", "pending_review", "completed"].includes(nextStatus)) {
-      const workerCountError = validateWorkerCount(currentAppointment.service_type, currentAppointment.worker_ids);
+      const workerCountError = validateWorkerCount(
+        currentAppointment.service_type,
+        currentAppointment.worker_ids,
+        appointmentSettings.service_worker_requirements,
+      );
       if (workerCountError) {
         return NextResponse.json({ error: workerCountError }, { status: 400 });
       }
@@ -52,7 +59,10 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
         currentAppointment.timeslot,
         id,
       );
-      const capacityError = validateCapacity(slotAppointments, currentAppointment.service_type);
+      const capacityError = validateCapacity(slotAppointments, currentAppointment.service_type, {
+        serviceWorkerRequirements: appointmentSettings.service_worker_requirements,
+        totalSlotCapacity: appointmentSettings.total_slot_capacity,
+      });
       if (capacityError) {
         return NextResponse.json({ error: capacityError }, { status: 400 });
       }

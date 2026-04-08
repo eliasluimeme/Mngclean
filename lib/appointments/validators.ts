@@ -1,8 +1,13 @@
-import { getRequiredWorkers, getServiceCredits, TOTAL_SLOT_CAPACITY } from "@/lib/appointments/capacity";
+import {
+  getRequiredWorkers,
+  getServiceCredits,
+  resolveCapacityOptions,
+} from "@/lib/appointments/capacity";
 import type {
   Appointment,
   AppointmentStatus,
   ServiceType,
+  ServiceWorkerRequirements,
   Timeslot,
 } from "@/lib/appointments/types";
 
@@ -44,8 +49,12 @@ export function normalizeWorkerIds(workerIds: unknown): string[] {
   );
 }
 
-export function validateWorkerCount(serviceType: ServiceType, workerIds: string[]): string | null {
-  const requiredWorkers = getRequiredWorkers(serviceType);
+export function validateWorkerCount(
+  serviceType: ServiceType,
+  workerIds: string[],
+  serviceWorkerRequirements?: Partial<ServiceWorkerRequirements> | null,
+): string | null {
+  const requiredWorkers = getRequiredWorkers(serviceType, serviceWorkerRequirements);
 
   if (workerIds.length !== requiredWorkers) {
     return `${capitalize(serviceType)} Menage requires exactly ${requiredWorkers} worker${requiredWorkers > 1 ? "s" : ""}.`;
@@ -57,10 +66,19 @@ export function validateWorkerCount(serviceType: ServiceType, workerIds: string[
 export function validateCapacity(
   existingAppointments: Pick<Appointment, "service_type">[],
   nextServiceType: ServiceType,
+  options?: {
+    serviceWorkerRequirements?: Partial<ServiceWorkerRequirements> | null;
+    totalSlotCapacity?: number | null;
+  },
 ): string | null {
-  const used = existingAppointments.reduce((total, appointment) => total + getServiceCredits(appointment.service_type), 0);
+  const { serviceWorkerRequirements, totalSlotCapacity } = resolveCapacityOptions(options);
 
-  if (used + getServiceCredits(nextServiceType) > TOTAL_SLOT_CAPACITY) {
+  const used = existingAppointments.reduce(
+    (total, appointment) => total + getServiceCredits(appointment.service_type, serviceWorkerRequirements),
+    0,
+  );
+
+  if (used + getServiceCredits(nextServiceType, serviceWorkerRequirements) > totalSlotCapacity) {
     return "Maximum capacity reached for this time slot.";
   }
 

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireAdminApiAccess } from "@/lib/admin-api";
 import { supabase } from "@/lib/supabase-server";
 import { isMissingAppointmentTimeColumnError } from "@/lib/appointments/db-errors";
+import { getAppointmentSettings } from "@/lib/appointments/settings";
 import { getAppointmentById, getSlotAppointments, getUnavailableWorkerIds } from "@/lib/appointments/server";
 import { ensureTimeRange, normalizeTimeString } from "@/lib/appointments/time";
 import {
@@ -90,6 +91,8 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
           ? body.notes.trim() || null
           : existingAppointment.notes;
 
+    const appointmentSettings = await getAppointmentSettings();
+
     if (!nextClientName) {
       return NextResponse.json({ error: "Client name is required." }, { status: 400 });
     }
@@ -99,7 +102,11 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     }
 
     if ((requiresStrictAssignment(nextStatus) || nextWorkerIds.length > 0) && nextStatus !== "cancelled") {
-      const workerCountError = validateWorkerCount(nextServiceType, nextWorkerIds);
+      const workerCountError = validateWorkerCount(
+        nextServiceType,
+        nextWorkerIds,
+        appointmentSettings.service_worker_requirements,
+      );
       if (workerCountError) {
         return NextResponse.json({ error: workerCountError }, { status: 400 });
       }
@@ -107,7 +114,10 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
 
     if (nextStatus !== "cancelled") {
       const slotAppointments = await getSlotAppointments(nextDate, nextTimeslot, id);
-      const capacityError = validateCapacity(slotAppointments, nextServiceType);
+      const capacityError = validateCapacity(slotAppointments, nextServiceType, {
+        serviceWorkerRequirements: appointmentSettings.service_worker_requirements,
+        totalSlotCapacity: appointmentSettings.total_slot_capacity,
+      });
 
       if (capacityError) {
         return NextResponse.json({ error: capacityError }, { status: 400 });

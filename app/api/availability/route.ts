@@ -28,7 +28,9 @@ export async function GET(request: Request) {
 
     return NextResponse.json({
       ...availability,
-      capacity_hint: getRemainingCapacityHint(availability.capacity.remaining),
+      capacity_hint: getRemainingCapacityHint(availability.capacity.remaining, {
+        serviceWorkerRequirements: availability.settings.service_worker_requirements,
+      }),
     });
   } catch (error: any) {
     return NextResponse.json({ error: error?.message || "Failed to fetch availability." }, { status: 500 });

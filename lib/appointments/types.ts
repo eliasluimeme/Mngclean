@@ -2,6 +2,35 @@ export type ServiceType = "grand" | "petit";
 
 export type Timeslot = "morning" | "evening";
 
+export type SubscriptionDurationUnit = "weeks" | "months";
+
+export type SubscriptionCadence = "weekly" | "biweekly";
+
+export interface SubscriptionWeekdayTimeOverride {
+  weekday: number;
+  start_time: string;
+  end_time: string;
+}
+
+export interface AppointmentSubscriptionInput {
+  enabled: boolean;
+  cadence?: SubscriptionCadence;
+  duration_unit: SubscriptionDurationUnit;
+  duration_count: number;
+  weekdays: number[];
+  weekday_time_overrides?: SubscriptionWeekdayTimeOverride[];
+}
+
+export interface ServiceWorkerRequirements {
+  grand: number;
+  petit: number;
+}
+
+export interface AppointmentSettings {
+  service_worker_requirements: ServiceWorkerRequirements;
+  total_slot_capacity: number;
+}
+
 export type AppointmentStatus =
   | "incoming"
   | "scheduled"
@@ -33,6 +62,7 @@ export interface Appointment {
   end_time: string | null;
   status: AppointmentStatus;
   notes: string | null;
+  subscription_id?: string | null;
   created_at: string;
 }
 
@@ -61,6 +91,7 @@ export interface AppointmentInput {
   status?: AppointmentStatus;
   notes?: string | null;
   worker_ids: string[];
+  subscription?: AppointmentSubscriptionInput | null;
 }
 
 export interface SlotCapacity {
@@ -77,4 +108,5 @@ export interface SlotAvailability {
   capacity: SlotCapacity;
   available_workers: Worker[];
   busy_worker_ids: string[];
+  settings: AppointmentSettings;
 }

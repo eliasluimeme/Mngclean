@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type {
   AppointmentInput,
   AppointmentStatus,
+  AppointmentSettings,
   AppointmentWithAssignments,
   Worker,
 } from "@/lib/appointments/types";
@@ -11,6 +12,7 @@ import type {
 interface UseAppointmentsResult {
   appointments: AppointmentWithAssignments[];
   workers: Worker[];
+  settings: AppointmentSettings | null;
   loading: boolean;
   error: string | null;
   refresh: () => Promise<void>;
@@ -21,6 +23,7 @@ interface UseAppointmentsResult {
   createWorker: (payload: Partial<Worker> & { name: string }) => Promise<void>;
   updateWorker: (id: string, payload: Partial<Worker>) => Promise<void>;
   deleteWorker: (id: string) => Promise<void>;
+  updateAppointmentSettings: (payload: Partial<AppointmentSettings>) => Promise<void>;
 }
 
 interface UseAppointmentsOptions {
@@ -116,6 +119,7 @@ async function requestJson<T>(url: string, options?: RequestInit): Promise<T> {
 export function useAppointments(options: UseAppointmentsOptions): UseAppointmentsResult {
   const [appointments, setAppointments] = useState<AppointmentWithAssignments[]>([]);
   const [workers, setWorkers] = useState<Worker[]>([]);
+  const [settings, setSettings] = useState<AppointmentSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const mutationVersionRef = useRef<Record<string, number>>({});
@@ -141,19 +145,22 @@ export function useAppointments(options: UseAppointmentsOptions): UseAppointment
     setError(null);
 
     try {
-      const [appointmentsData, workersData] = await Promise.all([
+      const [appointmentsData, workersData, settingsData] = await Promise.all([
         requestJson<AppointmentWithAssignments[]>(
           `/api/appointments?from=${range.from}&to=${range.to}`,
         ),
         requestJson<Worker[]>("/api/workers"),
+        requestJson<AppointmentSettings>("/api/appointments/settings"),
       ]);
 
       setAppointments(Array.isArray(appointmentsData) ? appointmentsData : []);
       setWorkers(Array.isArray(workersData) ? workersData : []);
+      setSettings(settingsData || null);
     } catch (err: any) {
       setError(mapAppointmentsError(err?.message || "Failed to load appointments."));
       setAppointments([]);
       setWorkers([]);
+      setSettings(null);
     } finally {
       setLoading(false);
     }
@@ -312,9 +319,21 @@ export function useAppointments(options: UseAppointmentsOptions): UseAppointment
     [refresh],
   );
 
+  const updateAppointmentSettings = useCallback(
+    async (payload: Partial<AppointmentSettings>) => {
+      await requestJson<AppointmentSettings>("/api/appointments/settings", {
+        method: "PATCH",
+        body: JSON.stringify(payload),
+      });
+      await refresh();
+    },
+    [refresh],
+  );
+
   return {
     appointments,
     workers,
+    settings,
     loading,
     error,
     refresh,
@@ -325,5 +344,6 @@ export function useAppointments(options: UseAppointmentsOptions): UseAppointment
     createWorker,
     updateWorker,
     deleteWorker,
+    updateAppointmentSettings,
   };
 }

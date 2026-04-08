@@ -110,6 +110,19 @@
   border-color: var(--calendar-grid);
 }
 
+/* In day/week views we do not use all-day events, so collapse the empty strip. */
+.appointments-calendar .rbc-time-view .rbc-allday-cell {
+  display: none;
+}
+
+.appointments-calendar .rbc-time-view .rbc-time-header-content > .rbc-row:first-child {
+  border-bottom: 1px solid var(--calendar-grid);
+}
+
+.appointments-calendar .rbc-time-view .rbc-time-content {
+  border-top: 0;
+}
+
 .appointments-calendar .rbc-time-gutter,
 .appointments-calendar .rbc-time-header-gutter {
   background-color: var(--calendar-gutter-bg);

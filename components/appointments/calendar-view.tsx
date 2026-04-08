@@ -73,6 +73,37 @@ interface CalendarEvent {
   durationMinutes: number;
 }
 
+interface CalendarSession {
+  key: "morning" | "evening";
+  label: string;
+  periodLabel: string;
+  startHour: number;
+  startMinute: number;
+  endHour: number;
+  endMinute: number;
+}
+
+const CALENDAR_SESSIONS: CalendarSession[] = [
+  {
+    key: "morning",
+    label: "Morning Calendar",
+    periodLabel: "08:00 - 12:30",
+    startHour: 8,
+    startMinute: 0,
+    endHour: 12,
+    endMinute: 30,
+  },
+  {
+    key: "evening",
+    label: "Evening Calendar",
+    periodLabel: "14:30 - 18:30",
+    startHour: 14,
+    startMinute: 30,
+    endHour: 18,
+    endMinute: 30,
+  },
+];
+
 function getEventTheme(appointment: AppointmentWithAssignments): {
   background: string;
   borderColor: string;
@@ -177,6 +208,22 @@ function buildCalendarEvents(appointments: AppointmentWithAssignments[]): Calend
   }));
 }
 
+function toMinutesSinceMidnight(date: Date): number {
+  return date.getHours() * 60 + date.getMinutes();
+}
+
+function withTime(baseDate: Date, hour: number, minute: number): Date {
+  return setMinutes(setHours(new Date(baseDate), hour), minute);
+}
+
+function doesEventOverlapSession(event: CalendarEvent, session: CalendarSession): boolean {
+  const eventStart = toMinutesSinceMidnight(event.start);
+  const eventEnd = toMinutesSinceMidnight(event.end);
+  const sessionStart = session.startHour * 60 + session.startMinute;
+  const sessionEnd = session.endHour * 60 + session.endMinute;
+  return eventStart < sessionEnd && eventEnd > sessionStart;
+}
+
 export function CalendarView({
   mode,
   selectedDate,
@@ -187,20 +234,33 @@ export function CalendarView({
   onRescheduleAppointment,
 }: CalendarViewProps) {
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const splitIntoSessions = mode !== "month";
 
   const events = useMemo(() => buildCalendarEvents(appointments), [appointments]);
 
-  const minTime = useMemo(
-    () => setMinutes(setHours(new Date(selectedDate), 7), 0),
+  const defaultMinTime = useMemo(
+    () => withTime(selectedDate, 7, 0),
     [selectedDate],
   );
-  const maxTime = useMemo(
-    () => setMinutes(setHours(new Date(selectedDate), 20), 0),
+  const defaultMaxTime = useMemo(
+    () => withTime(selectedDate, 20, 0),
     [selectedDate],
   );
-  const scrollToTime = useMemo(
-    () => setMinutes(setHours(new Date(selectedDate), 8), 0),
+  const defaultScrollToTime = useMemo(
+    () => withTime(selectedDate, 8, 0),
     [selectedDate],
+  );
+
+  const sessionCalendars = useMemo(
+    () =>
+      CALENDAR_SESSIONS.map((session) => ({
+        ...session,
+        events: events.filter((event) => doesEventOverlapSession(event, session)),
+        min: withTime(selectedDate, session.startHour, session.startMinute),
+        max: withTime(selectedDate, session.endHour, session.endMinute),
+        scrollToTime: withTime(selectedDate, session.startHour, session.startMinute),
+      })),
+    [events, selectedDate],
   );
 
   const persistScheduleUpdate = async (event: any, start: Date, end: Date) => {
@@ -244,164 +304,182 @@ export function CalendarView({
     onAddAppointment(date, deriveTimeslotFromTime(startTime), startTime, endTime);
   };
 
-  return (
-    <div className="rounded-2xl border border-border/65 bg-card p-4 shadow-sm">
-      <div className="mb-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-        <span className="rounded-full border border-blue-400/40 bg-blue-500/10 px-2 py-1 text-blue-600 dark:text-blue-300">
-          Grand Menage
-        </span>
-        <span className="rounded-full border border-teal-400/40 bg-teal-500/10 px-2 py-1 text-teal-600 dark:text-teal-300">
-          Petit Menage
-        </span>
-        <span className="rounded-full border border-amber-400/45 bg-amber-500/10 px-2 py-1 text-amber-600 dark:text-amber-300">
-          Same-time bookings auto-split
-        </span>
-        <span className="rounded-full border border-violet-400/45 bg-violet-500/10 px-2 py-1 text-violet-600 dark:text-violet-300">
-          3+ overlap shows +N marker
-        </span>
-        <span className="rounded-full border border-border bg-muted/40 px-2 py-1">
-          Drag to move or resize appointments
-        </span>
-      </div>
+  const renderCalendar = (
+    calendarEvents: CalendarEvent[],
+    options: {
+      min: Date;
+      max: Date;
+      scrollToTime: Date;
+    },
+  ) => (
+    <DraggableCalendar
+      localizer={localizer}
+      events={calendarEvents}
+      date={selectedDate}
+      view={VIEW_BY_MODE[mode] as any}
+      onNavigate={onSelectDate}
+      toolbar={false}
+      popup
+      selectable
+      resizable={mode !== "month"}
+      onSelectEvent={(event: any) => onEditAppointment(event.resource)}
+      onSelectSlot={onSelectSlot}
+      onEventDrop={onDrop}
+      onEventResize={onResize}
+      scrollToTime={options.scrollToTime}
+      dayLayoutAlgorithm="no-overlap"
+      tooltipAccessor={(event: any) => {
+        const calendarEvent = event as CalendarEvent;
+        const appointment = calendarEvent.resource;
+        const overlapLabel =
+          calendarEvent.meta.simultaneousCount > 1
+            ? ` | Same-time ${calendarEvent.meta.simultaneousIndex}/${calendarEvent.meta.simultaneousCount}`
+            : "";
+        const overflowLabel =
+          calendarEvent.meta.overflowCount > 0
+            ? ` | +${calendarEvent.meta.overflowCount} more in this timeslot`
+            : "";
+        return `${appointment.client_name} | ${asTimeLabel(calendarEvent.start)} - ${asTimeLabel(calendarEvent.end)} | ${appointment.worker_ids.length}/${appointment.required_workers} workers${overlapLabel}${overflowLabel}`;
+      }}
+      eventPropGetter={(event: any) => {
+        const calendarEvent = event as CalendarEvent;
+        const isUpdating = updatingId === calendarEvent.id;
+        const appointment = calendarEvent.resource;
+        const theme = getEventTheme(appointment);
+        const isSimultaneous = calendarEvent.meta.simultaneousCount > 1;
+        const isDense = calendarEvent.meta.simultaneousCount >= 3;
+        const isShort = calendarEvent.durationMinutes <= 45;
 
-      <div className="appointments-calendar h-[720px] sm:h-[760px]">
-        <DraggableCalendar
-          localizer={localizer}
-          events={events}
-          date={selectedDate}
-          view={VIEW_BY_MODE[mode] as any}
-          onNavigate={onSelectDate}
-          toolbar={false}
-          popup
-          selectable
-          resizable={mode !== "month"}
-          onSelectEvent={(event: any) => onEditAppointment(event.resource)}
-          onSelectSlot={onSelectSlot}
-          onEventDrop={onDrop}
-          onEventResize={onResize}
-          scrollToTime={scrollToTime}
-          dayLayoutAlgorithm="no-overlap"
-          tooltipAccessor={(event: any) => {
-            const calendarEvent = event as CalendarEvent;
-            const appointment = calendarEvent.resource;
-            const overlapLabel =
-              calendarEvent.meta.simultaneousCount > 1
-                ? ` | Same-time ${calendarEvent.meta.simultaneousIndex}/${calendarEvent.meta.simultaneousCount}`
-                : "";
-            const overflowLabel =
-              calendarEvent.meta.overflowCount > 0
-                ? ` | +${calendarEvent.meta.overflowCount} more in this timeslot`
-                : "";
-            return `${appointment.client_name} | ${asTimeLabel(calendarEvent.start)} - ${asTimeLabel(calendarEvent.end)} | ${appointment.worker_ids.length}/${appointment.required_workers} workers${overlapLabel}${overflowLabel}`;
-          }}
-          eventPropGetter={(event: any) => {
-            const calendarEvent = event as CalendarEvent;
-            const isUpdating = updatingId === calendarEvent.id;
-            const appointment = calendarEvent.resource;
-            const theme = getEventTheme(appointment);
-            const isSimultaneous = calendarEvent.meta.simultaneousCount > 1;
-            const isDense = calendarEvent.meta.simultaneousCount >= 3;
-            const isShort = calendarEvent.durationMinutes <= 45;
+        return {
+          style: {
+            background: theme.background,
+            borderRadius: isDense ? "10px" : "12px",
+            border: `1px solid ${theme.borderColor}`,
+            color: theme.textColor,
+            boxShadow: isUpdating
+              ? "0 0 0 2px rgba(99, 102, 241, 0.55), 0 10px 20px rgba(15, 23, 42, 0.28)"
+              : isSimultaneous
+                ? "0 0 0 1px rgba(248, 250, 252, 0.42), 0 6px 14px rgba(15, 23, 42, 0.24)"
+                : "0 5px 12px rgba(15, 23, 42, 0.2)",
+            opacity: isUpdating ? 0.65 : 1,
+            letterSpacing: isShort ? "0.005em" : "normal",
+          },
+        };
+      }}
+      components={{
+        event: ({ event }: any) => {
+          const calendarEvent = event as CalendarEvent;
+          const appointment = calendarEvent.resource;
+          const serviceLabel = appointment.service_type === "grand" ? "Grand" : "Petit";
+          const workerLabel = `${appointment.worker_ids.length}/${appointment.required_workers}`;
+          const isTiny = calendarEvent.durationMinutes <= 30;
+          const isShort = calendarEvent.durationMinutes <= 45;
+          const isDense = calendarEvent.meta.simultaneousCount >= 3;
+          const isMinimalDense = isDense && calendarEvent.meta.simultaneousIndex > 2;
+          const useCompactLayout = isShort || isDense;
+          const useCollapsedLayout = isTiny || isMinimalDense;
+          const showOverflowMarker =
+            calendarEvent.meta.overflowCount > 0 && calendarEvent.meta.simultaneousIndex === 1;
+          const simultaneousLabel =
+            calendarEvent.meta.simultaneousCount > 1
+              ? `${calendarEvent.meta.simultaneousIndex}/${calendarEvent.meta.simultaneousCount} same-time`
+              : null;
+          const compactClientName = toCompactClientName(appointment.client_name);
+          const clientInitials = getClientInitials(appointment.client_name);
+          const collapsedClientLabel =
+            appointment.client_name.trim().length <= 8 ? appointment.client_name.trim() : clientInitials;
 
-            return {
-              style: {
-                background: theme.background,
-                borderRadius: isDense ? "10px" : "12px",
-                border: `1px solid ${theme.borderColor}`,
-                color: theme.textColor,
-                boxShadow: isUpdating
-                  ? "0 0 0 2px rgba(99, 102, 241, 0.55), 0 10px 20px rgba(15, 23, 42, 0.28)"
-                  : isSimultaneous
-                    ? "0 0 0 1px rgba(248, 250, 252, 0.42), 0 6px 14px rgba(15, 23, 42, 0.24)"
-                    : "0 5px 12px rgba(15, 23, 42, 0.2)",
-                opacity: isUpdating ? 0.65 : 1,
-                letterSpacing: isShort ? "0.005em" : "normal",
-              },
-            };
-          }}
-          components={{
-            event: ({ event }: any) => {
-              const calendarEvent = event as CalendarEvent;
-              const appointment = calendarEvent.resource;
-              const serviceLabel = appointment.service_type === "grand" ? "Grand" : "Petit";
-              const workerLabel = `${appointment.worker_ids.length}/${appointment.required_workers}`;
-              const isTiny = calendarEvent.durationMinutes <= 30;
-              const isShort = calendarEvent.durationMinutes <= 45;
-              const isDense = calendarEvent.meta.simultaneousCount >= 3;
-              const isMinimalDense = isDense && calendarEvent.meta.simultaneousIndex > 2;
-              const useCompactLayout = isShort || isDense;
-              const useCollapsedLayout = isTiny || isMinimalDense;
-              const showOverflowMarker =
-                calendarEvent.meta.overflowCount > 0 && calendarEvent.meta.simultaneousIndex === 1;
-              const simultaneousLabel =
-                calendarEvent.meta.simultaneousCount > 1
-                  ? `${calendarEvent.meta.simultaneousIndex}/${calendarEvent.meta.simultaneousCount} same-time`
-                  : null;
-              const compactClientName = toCompactClientName(appointment.client_name);
-              const clientInitials = getClientInitials(appointment.client_name);
-              const collapsedClientLabel =
-                appointment.client_name.trim().length <= 8 ? appointment.client_name.trim() : clientInitials;
+          return (
+            <div
+              className={`calendar-appointment-card ${useCompactLayout ? "is-compact" : ""} ${
+                isDense ? "is-dense" : ""
+              } ${
+                useCollapsedLayout ? "is-collapsed" : ""
+              }`}
+            >
+              {useCollapsedLayout ? (
+                <div className="calendar-collapsed-row">
+                  <p className="calendar-collapsed-client">{collapsedClientLabel}</p>
+                  <div className="calendar-collapsed-right">
+                    {showOverflowMarker ? (
+                      <p className="calendar-overflow-marker">+{calendarEvent.meta.overflowCount}</p>
+                    ) : null}
+                    <p className="calendar-collapsed-time">{asTimeLabel(calendarEvent.start)}</p>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="calendar-appointment-top">
+                    <p className="calendar-service-label">{serviceLabel}</p>
+                    {showOverflowMarker ? (
+                      <p className="calendar-overflow-marker">+{calendarEvent.meta.overflowCount}</p>
+                    ) : simultaneousLabel ? (
+                      <p className="calendar-density-pill">{simultaneousLabel}</p>
+                    ) : (
+                      <p className="calendar-worker-pill">{workerLabel} workers</p>
+                    )}
+                  </div>
 
-              return (
-                <div
-                  className={`calendar-appointment-card ${useCompactLayout ? "is-compact" : ""} ${
-                    isDense ? "is-dense" : ""
-                  } ${
-                    useCollapsedLayout ? "is-collapsed" : ""
-                  }`}
-                >
-                  {useCollapsedLayout ? (
-                    <div className="calendar-collapsed-row">
-                      <p className="calendar-collapsed-client">{collapsedClientLabel}</p>
-                      <div className="calendar-collapsed-right">
-                        {showOverflowMarker ? (
-                          <p className="calendar-overflow-marker">+{calendarEvent.meta.overflowCount}</p>
-                        ) : null}
-                        <p className="calendar-collapsed-time">{asTimeLabel(calendarEvent.start)}</p>
-                      </div>
-                    </div>
+                  {useCompactLayout ? (
+                  <>
+                    <p className="calendar-client-name">{compactClientName}</p>
+
+                    <p className="calendar-compact-meta">
+                        {asTimeLabel(calendarEvent.start)} - {asTimeLabel(calendarEvent.end)} - {workerLabel}w
+                    </p>
+                  </>
                   ) : (
                     <>
-                      <div className="calendar-appointment-top">
-                        <p className="calendar-service-label">{serviceLabel}</p>
-                        {showOverflowMarker ? (
-                          <p className="calendar-overflow-marker">+{calendarEvent.meta.overflowCount}</p>
-                        ) : simultaneousLabel ? (
-                          <p className="calendar-density-pill">{simultaneousLabel}</p>
-                        ) : (
-                          <p className="calendar-worker-pill">{workerLabel} workers</p>
-                        )}
-                      </div>
+                      <p className="calendar-client-name">{compactClientName}</p>
 
-                      {useCompactLayout ? (
-                      <>
-                        <p className="calendar-client-name">{compactClientName}</p>
-
-                        <p className="calendar-compact-meta">
-                            {asTimeLabel(calendarEvent.start)} - {asTimeLabel(calendarEvent.end)} - {workerLabel}w
-                        </p>
-                      </>
-                      ) : (
-                        <>
-                          <p className="calendar-client-name">{compactClientName}</p>
-
-                          <p className="calendar-appointment-meta">
-                            {asTimeLabel(calendarEvent.start)} - {asTimeLabel(calendarEvent.end)} - {workerLabel} workers
-                          </p>
-                        </>
-                      )}
+                      <p className="calendar-appointment-meta">
+                        {asTimeLabel(calendarEvent.start)} - {asTimeLabel(calendarEvent.end)} - {workerLabel} workers
+                      </p>
                     </>
                   )}
-                </div>
-              );
-            },
-          }}
-          step={15}
-          timeslots={2}
-          min={minTime}
-          max={maxTime}
-        />
-      </div>
+                </>
+              )}
+            </div>
+          );
+        },
+      }}
+      step={15}
+      timeslots={2}
+      min={options.min}
+      max={options.max}
+    />
+  );
+
+  return (
+    <div className="rounded-2xl border border-border/65 bg-card p-4 shadow-sm">
+      {splitIntoSessions ? (
+        <div className="space-y-4">
+          {sessionCalendars.map((session) => (
+            <section key={session.key} className="rounded-xl border border-border/65 bg-background/40 p-3">
+              <div className="mb-3 flex items-baseline justify-between gap-2">
+                <h3 className="text-sm font-semibold text-foreground">{session.label}</h3>
+                <p className="text-xs font-medium text-muted-foreground">{session.periodLabel}</p>
+              </div>
+
+              <div className="appointments-calendar h-[320px] sm:h-[340px]">
+                {renderCalendar(session.events, {
+                  min: session.min,
+                  max: session.max,
+                  scrollToTime: session.scrollToTime,
+                })}
+              </div>
+            </section>
+          ))}
+        </div>
+      ) : (
+        <div className="appointments-calendar h-[720px] sm:h-[760px]">
+          {renderCalendar(events, {
+            min: defaultMinTime,
+            max: defaultMaxTime,
+            scrollToTime: defaultScrollToTime,
+          })}
+        </div>
+      )}
     </div>
   );
 }

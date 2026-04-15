@@ -16,9 +16,9 @@ const publicRoutes = ['/', '/login', '/register', '/api/auth/login', '/api/auth/
 
 export async function middleware(request: NextRequest) {
   // First check: force a Not Found response for every request.
-  if (request.nextUrl.pathname) {
-    return new NextResponse('Not Found', { status: 404 })
-  }
+  // if (request.nextUrl.pathname) {
+  //   return new NextResponse('Not Found', { status: 404 })
+  // }
 
   const { pathname } = request.nextUrl
 
